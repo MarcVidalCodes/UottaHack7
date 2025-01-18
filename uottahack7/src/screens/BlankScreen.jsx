@@ -3,59 +3,65 @@ import { View, StyleSheet, Platform, Text } from 'react-native'; // Import Text 
 import MapView, { Circle } from 'react-native-maps'; // Import Circle component
 import * as Location from 'expo-location';
 import Slider from '@react-native-community/slider';
+
 export default function App() {
-    const [location, setLocation] = useState(null);
-    const [radius, setRadius] = useState(5000); // Initial radius of 5km
-    const [timer, setTimer] = useState(15); // Initial timer of 15 seconds
-    const [circleCenter, setCircleCenter] = useState(null);
-    useEffect(() => {
-      const requestLocationPermission = async () => {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          console.error('Location permission denied');
-          return;
-        }
-        Location.watchPositionAsync(
-          {
-            accuracy: Location.Accuracy.High,
-            timeInterval: 1000,
-            distanceInterval: 1,
-          },
-          (location) => {
-            setLocation({
+  const [location, setLocation] = useState(null);
+  const [radius, setRadius] = useState(5000); // Initial radius of 5km
+  const [timer, setTimer] = useState(15); // Initial timer of 15 seconds
+  const [circleCenter, setCircleCenter] = useState(null);
+
+  useEffect(() => {
+    const requestLocationPermission = async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.error('Location permission denied');
+        return;
+      }
+
+      Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 1000,
+          distanceInterval: 1,
+        },
+        (location) => {
+          setLocation({
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          });
+          if (!circleCenter) {
+            setCircleCenter({
               latitude: location.coords.latitude,
               longitude: location.coords.longitude,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
             });
-            if (!circleCenter) {
-              setCircleCenter({
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
-              });
-            }
           }
-        );
-      };
-      requestLocationPermission();
-    }, []);
-    useEffect(() => {
-      const interval = setInterval(() => {
-        setTimer((prevTimer) => {
-          if (prevTimer === 1) {
-            setRadius((prevRadius) => Math.max(prevRadius - 1000, 0)); // Reduce radius by 1km
-            setCircleCenter((prevCenter) => ({
-              latitude: prevCenter.latitude + (Math.random() - 0.5) * 0.01,
-              longitude: prevCenter.longitude + (Math.random() - 0.5) * 0.01,
-            }));
-            return 15; // Reset timer to 15 seconds
-          }
-          return prevTimer - 1;
-        });
-      }, 1000);
-      return () => clearInterval(interval);
-    }, []);
-  
+        }
+      );
+    };
+
+    requestLocationPermission();
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimer((prevTimer) => {
+        if (prevTimer === 1) {
+          setRadius((prevRadius) => Math.max(prevRadius - 1000, 0)); // Reduce radius by 1km
+          setCircleCenter((prevCenter) => ({
+            latitude: prevCenter.latitude + (Math.random() - 0.5) * 0.01,
+            longitude: prevCenter.longitude + (Math.random() - 0.5) * 0.01,
+          }));
+          return 15; // Reset timer to 15 seconds
+        }
+        return prevTimer - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <View style={styles.container}>
       {location ? (
@@ -98,6 +104,7 @@ export default function App() {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,

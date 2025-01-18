@@ -6,35 +6,44 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const rooms = {};
+const rooms = {
+  server1: [],
+  server2: [],
+  server3: [],
+  server4: []
+};
 
 io.on('connection', (socket) => {
-  console.log('New connection');
+  console.log('New connection:', socket.id);
 
-  socket.on('joinRoom', ({ room, username }) => {
-    socket.join(room);
-    if (!rooms[room]) {
-      rooms[room] = [];
-    }
-
-    // Check if the username already exists in the room
-    const userExists = rooms[room].some(user => user.username === username);
-    if (userExists) {
-      console.log(`Username ${username} already exists in room ${room}`);
-      socket.emit('usernameExists', { error: 'Username already exists in the room' });
+  socket.on('joinRoom', ({ room, username, color }) => {
+    console.log(`joinRoom event received: room=${room}, username=${username}, color=${color}`);
+    if (rooms[room].length >= 10) {
+      socket.emit('roomFull', { error: 'Room is full' });
       return;
     }
 
-    rooms[room].push({ id: socket.id, username });
+    socket.join(room);
+    rooms[room].push({ id: socket.id, username, color });
     console.log(`Joined room: ${room}`);
-    console.log(`Current users in room ${room}: ${rooms[room].map(user => user.username)}`);
+    console.log(`Current users in room ${room}: ${rooms[room].map(user => `${user.username} (${user.id})`).join(', ')}`);
+    io.to(room).emit('roomUsers', rooms[room]);
+  });
+
+  socket.on('leaveRoom', ({ room }) => {
+    console.log(`leaveRoom event received: room=${room}`);
+    rooms[room] = rooms[room].filter(user => user.id !== socket.id);
+    socket.leave(room);
+    console.log(`User left room: ${room}`);
+    console.log(`Current users in room ${room}: ${rooms[room].map(user => `${user.username} (${user.id})`).join(', ')}`);
     io.to(room).emit('roomUsers', rooms[room]);
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected');
+    console.log('User disconnected:', socket.id);
     for (const room in rooms) {
       rooms[room] = rooms[room].filter(user => user.id !== socket.id);
+      console.log(`Current users in room ${room}: ${rooms[room].map(user => `${user.username} (${user.id})`).join(', ')}`);
       io.to(room).emit('roomUsers', rooms[room]);
     }
   });
